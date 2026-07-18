@@ -2,7 +2,7 @@ PYTHON := ./.venv/bin/python
 CAIRO_ENV := DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib
 SIZE ?= 256
 
-.PHONY: synth test check train-help clean-samples
+.PHONY: synth test check train-help predict-help clean-samples
 
 synth:
 	$(CAIRO_ENV) $(PYTHON) -m src.synth.generate --output samples --count $(SIZE)
@@ -15,6 +15,10 @@ check: test
 
 train-help:
 	@echo 'Deferred GPU command: python train.py --manifest samples/manifest.jsonl --output checkpoints'
+
+predict-help:
+	$(CAIRO_ENV) $(PYTHON) predict.py --help
+	$(CAIRO_ENV) $(PYTHON) predict.py --dry-run
 
 clean-samples:
 	@echo 'Remove samples manually if you intend to replace the proof set.'

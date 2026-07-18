@@ -79,6 +79,81 @@ def validate(text: str) -> None:
                 raise ValueError(f"missing duration after {token}")
 
 
+def parse(text: str) -> tuple[ScoreRecord, str]:
+    """Parse validated OMRDSL into its canonical record and notation name."""
+    validate(text)
+    ts = tokens(text)
+    notation = ts[3].removeprefix("NOTATION_").lower()
+    clef = ts[4].removeprefix("CLEF_")
+    key_fifths = int(ts[5].removeprefix("KEY_"))
+    numerator, denominator = map(int, ts[6].removeprefix("TIME_").split("_"))
+    measures: list[MeasureRecord] = []
+    index = 7
+    while ts[index] != "PART_END":
+        if not ts[index].startswith("BAR_") or ts[index] == "BAR_END":
+            raise ValueError(f"expected measure, got {ts[index]}")
+        number = int(ts[index].removeprefix("BAR_")); index += 1
+        voices: list[tuple[Event, ...]] = []
+        while ts[index] != "BAR_END":
+            expected_voice = f"VOICE_{len(voices) + 1}"
+            if ts[index] != expected_voice:
+                raise ValueError(f"expected {expected_voice}, got {ts[index]}")
+            index += 1
+            events: list[Event] = []
+            while not ts[index].startswith("VOICE_") and ts[index] != "BAR_END":
+                token = ts[index]
+                if token == "REST":
+                    events.append(Event("REST", int(ts[index + 1].removeprefix("DUR_"))))
+                    index += 2
+                elif token.startswith("NOTE_"):
+                    events.append(Event("NOTE", int(ts[index + 1].removeprefix("DUR_")),
+                                        (token.removeprefix("NOTE_"),)))
+                    index += 2
+                elif token == "CHORD_BEGIN":
+                    index += 1; pitches: list[str] = []
+                    while ts[index] != "CHORD_END":
+                        if not ts[index].startswith("PITCH_"):
+                            raise ValueError(f"expected chord pitch, got {ts[index]}")
+                        pitches.append(ts[index].removeprefix("PITCH_")); index += 1
+                    duration = int(ts[index + 1].removeprefix("DUR_"))
+                    events.append(Event("CHORD", duration, tuple(pitches))); index += 2
+                else:
+                    raise ValueError(f"unexpected event token: {token}")
+            voices.append(tuple(events))
+        measures.append(MeasureRecord(number, tuple(voices))); index += 1
+    return ScoreRecord(clef, key_fifths, (numerator, denominator), tuple(measures)), notation
+
+
+def to_music21(record: ScoreRecord):
+    """Build a music21 score from an OMRDSL semantic record."""
+    from fractions import Fraction
+    from music21 import chord, clef, key, meter, note, stream
+
+    score = stream.Score()
+    part = stream.Part(id="P1")
+    if record.clef != "G2":
+        raise ValueError(f"unsupported clef: {record.clef}")
+    part.insert(0, clef.TrebleClef())
+    part.insert(0, key.KeySignature(record.key_fifths))
+    part.insert(0, meter.TimeSignature(f"{record.time[0]}/{record.time[1]}"))
+    for measure_record in record.measures:
+        measure = stream.Measure(number=measure_record.number)
+        containers = ([measure] if len(measure_record.voices) == 1 else
+                      [stream.Voice(id=str(i)) for i in range(1, len(measure_record.voices) + 1)])
+        for container, events in zip(containers, measure_record.voices):
+            for event in events:
+                obj = (note.Rest() if event.kind == "REST" else
+                       note.Note(event.pitches[0]) if len(event.pitches) == 1 else
+                       chord.Chord(event.pitches))
+                obj.duration.quarterLength = Fraction(event.duration, 4)
+                container.append(obj)
+            if container is not measure:
+                measure.insert(0, container)
+        part.append(measure)
+    score.append(part)
+    return score
+
+
 def iter_tokens(records: Iterable[ScoreRecord]) -> Iterable[str]:
     for record in records:
         yield from tokens(serialize(record))

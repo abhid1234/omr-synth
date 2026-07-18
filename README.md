@@ -41,16 +41,33 @@ notation, renderer, and curriculum metadata. The framework-neutral loader suppor
 train/validation/test splits and `max_curriculum` filtering. Evaluation provides
 token edit distance, symbol error rate, token accuracy, and exact match.
 
-## Deferred GPU training
+## Deferred training and inference
 
-Tonight's boundary is $0: no Torch install, model download, GPU, paid API, or training run. Model and
-training code are reviewable in `src/model/omr.py` and `train.py`, but importing them requires the
-optional PyTorch stack. In a separate GPU environment later:
+Tonight's boundary is $0: no Torch install, model download, GPU, paid API, training run, or inference
+run. Model and training code are reviewable in `src/model/omr.py` and `train.py`. `predict.py` adds
+checkpoint image inference with greedy OMRDSL decoding and an optional MusicXML/Verovio visual
+round-trip. Torch is imported only when real inference starts, so help, dry-run, preprocessing, and
+symbolic conversion remain usable in the existing environment:
+
+```bash
+make predict-help
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib ./.venv/bin/python predict.py --dry-run
+```
+
+In a separate Torch environment later:
 
 ```bash
 python -m pip install 'torch>=2.5,<3' 'torchvision>=0.20,<1'
 python train.py --manifest samples/manifest.jsonl --output checkpoints --epochs 30 --batch-size 8
+python predict.py --checkpoint checkpoints/epoch-030.pt --image page.png
+python predict.py --checkpoint checkpoints/epoch-030.pt --image page.png \
+  --musicxml prediction.musicxml --render prediction.png
 ```
+
+The checkpoint vocabulary is used for decoding, and inference applies the same grayscale,
+aspect-preserving white padding and ink-positive scaling as training. `--musicxml` reconstructs the
+semantic OMRDSL subset; `--render` creates a Western staff PNG with Verovio even when the recognized
+input notation was Jianpu. This is a semantic/visual check, not recovery of original engraving layout.
 
 For meaningful training, generate a much larger manifest and keep real manuscripts held out by
 source/composer/page. MUSCIMA++ and appropriately licensed MusiCorpus material are future real-domain
