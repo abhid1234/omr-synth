@@ -7,3 +7,4 @@ codex-build*.log
 checkpoints/
 runs/
 # samples/ is intentionally tracked as a small executable proof artifact.
+samples/
