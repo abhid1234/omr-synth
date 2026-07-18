@@ -10,8 +10,9 @@ def default_vocabulary() -> list[str]:
     special = ["<pad>", "<bos>", "<eos>", "<unk>"]
     structural = ["VERSION_1", "PART_BEGIN", "PART_END", "BAR_END", "REST",
                   "CHORD_BEGIN", "CHORD_END", "CLEF_G2"]
+    notations = ["NOTATION_WESTERN", "NOTATION_JIANPU"]
     keys = [f"KEY_{n}" for n in range(-4, 5)]
-    times = ["TIME_2_4", "TIME_3_4", "TIME_4_4", "TIME_6_8"]
+    times = ["TIME_2_4", "TIME_3_4", "TIME_4_4", "TIME_5_4", "TIME_6_8", "TIME_9_8"]
     bars = [f"BAR_{n}" for n in range(1, 17)]
     voices = ["VOICE_1", "VOICE_2"]
     durations = [f"DUR_{n}" for n in (1, 2, 3, 4, 6, 8, 12, 16)]
@@ -20,7 +21,7 @@ def default_vocabulary() -> list[str]:
                for prefix in ("NOTE", "PITCH")
                for octave in range(2, 7)
                for letter in "CDEFGAB" for acc in accidentals]
-    return special + structural + keys + times + bars + voices + durations + pitches
+    return special + structural + notations + keys + times + bars + voices + durations + pitches
 
 
 @dataclass

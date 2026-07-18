@@ -18,17 +18,18 @@ class ManifestItem:
     target_path: Path
     curriculum: int
     split: str
+    notation: str
 
 
 class ManifestDataset:
-    def __init__(self, manifest: Path, split: str | None = None, max_curriculum: int = 2) -> None:
+    def __init__(self, manifest: Path, split: str | None = None, max_curriculum: int = 3) -> None:
         self.root = manifest.parent
         self.items: list[ManifestItem] = []
         for line_no, line in enumerate(manifest.read_text(encoding="utf-8").splitlines(), 1):
             row = json.loads(line)
             assigned = split_name(row["id"])
             item = ManifestItem(row["id"], self.root / row["image"], self.root / row["target"],
-                                int(row["curriculum"]), assigned)
+                                int(row["curriculum"]), assigned, row.get("notation", "western"))
             if item.curriculum <= max_curriculum and (split is None or assigned == split):
                 if not item.image_path.is_file() or not item.target_path.is_file():
                     raise FileNotFoundError(f"manifest line {line_no} points to a missing file")

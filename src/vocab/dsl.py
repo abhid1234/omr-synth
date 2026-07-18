@@ -28,8 +28,12 @@ class ScoreRecord:
     measures: tuple[MeasureRecord, ...]
 
 
-def serialize(record: ScoreRecord) -> str:
-    tokens = ["<bos>", DSL_VERSION, "PART_BEGIN", f"CLEF_{record.clef}",
+def serialize(record: ScoreRecord, notation: str = "western") -> str:
+    """Serialize semantic music plus the visual notation used for its image."""
+    notation_token = f"NOTATION_{notation.upper()}"
+    if notation_token not in {"NOTATION_WESTERN", "NOTATION_JIANPU"}:
+        raise ValueError(f"unsupported notation: {notation}")
+    tokens = ["<bos>", DSL_VERSION, "PART_BEGIN", notation_token, f"CLEF_{record.clef}",
               f"KEY_{record.key_fifths}", f"TIME_{record.time[0]}_{record.time[1]}"]
     for measure in record.measures:
         tokens.append(f"BAR_{measure.number}")
@@ -61,6 +65,10 @@ def validate(text: str) -> None:
         raise ValueError("invalid OMRDSL header")
     if ts[-2:] != ["PART_END", "<eos>"]:
         raise ValueError("invalid OMRDSL trailer")
+    notation = [t for t in ts if t.startswith("NOTATION_")]
+    if notation and (len(notation) != 1 or notation[0] not in
+                     {"NOTATION_WESTERN", "NOTATION_JIANPU"}):
+        raise ValueError("invalid notation marker")
     if not any(t.startswith("BAR_") and t != "BAR_END" for t in ts):
         raise ValueError("score has no measures")
     if ts.count("CHORD_BEGIN") != ts.count("CHORD_END"):

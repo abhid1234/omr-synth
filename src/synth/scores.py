@@ -8,8 +8,9 @@ from music21 import clef, key, meter, note, stream
 
 from src.vocab.dsl import Event, MeasureRecord, ScoreRecord
 
-DURATIONS = ((1, 0.25), (2, 0.5), (4, 1.0), (8, 2.0))
-PITCHES = ("C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5", "D5", "E5")
+DURATIONS = ((1, 0.25), (2, 0.5), (3, 0.75), (4, 1.0), (6, 1.5), (8, 2.0), (12, 3.0))
+PITCHES = ("G3", "A3", "B3", "C4", "D4", "E4", "F4", "G4", "A4", "B4",
+           "C5", "D5", "E5", "F5", "G5")
 
 
 def _events_for_bar(rng: random.Random, units: int, rests: bool) -> list[Event]:
@@ -34,14 +35,18 @@ def _append_voice(container: stream.Stream, events: list[Event]) -> None:
         container.append(obj)
 
 
-def generate_score(seed: int, level: int = 1, measures: int = 2) -> tuple[stream.Score, ScoreRecord]:
-    if level not in (0, 1, 2):
-        raise ValueError("curriculum level must be 0, 1, or 2")
+def generate_score(seed: int, level: int = 1, measures: int | None = None) -> tuple[stream.Score, ScoreRecord]:
+    if level not in (0, 1, 2, 3):
+        raise ValueError("curriculum level must be 0, 1, 2, or 3")
     rng = random.Random(seed)
-    time_choices = [(4, 4)] if level == 0 else [(2, 4), (3, 4), (4, 4), (6, 8)]
+    time_choices = ([(4, 4)] if level == 0 else
+                    [(2, 4), (3, 4), (4, 4), (6, 8)] if level < 3 else
+                    [(2, 4), (3, 4), (4, 4), (5, 4), (6, 8), (9, 8)])
     numerator, denominator = rng.choice(time_choices)
     units_per_bar = numerator * (16 // denominator)
-    fifths = 0 if level == 0 else rng.randint(-2, 2)
+    fifths = 0 if level == 0 else rng.randint(-2 if level < 3 else -4, 2 if level < 3 else 4)
+    if measures is None:
+        measures = rng.randint(2, 3) if level < 2 else rng.randint(3, 5 if level == 2 else 7)
 
     score = stream.Score(id=f"synthetic-{seed}")
     part = stream.Part(id="P1")
@@ -53,7 +58,7 @@ def generate_score(seed: int, level: int = 1, measures: int = 2) -> tuple[stream
         measure = stream.Measure(number=number)
         first = _events_for_bar(rng, units_per_bar, rests=level >= 1)
         voice_records = [tuple(first)]
-        if level == 2:
+        if level >= 2:
             v1, v2 = stream.Voice(id="1"), stream.Voice(id="2")
             _append_voice(v1, first)
             second = _events_for_bar(rng, units_per_bar, rests=True)

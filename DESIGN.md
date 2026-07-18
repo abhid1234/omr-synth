@@ -3,27 +3,26 @@
 ## Product boundary
 
 `omr-synth` is a synthetic-data-first foundation for optical music recognition (OMR) where labeled
-real images are scarce. The first target is deliberately tractable: one-page, one- or two-voice
-Western staff excerpts containing notes, rests, barlines, ties, key signatures, time signatures, and
-simple dynamics. Symbolic scores are generated first, then rendered and degraded toward imperfect
-scans and handwritten-composer conditions. This is a curriculum, not a claim that synthetic Western
-engraving is equivalent to handwriting.
+real images are scarce. It supports Western staff notation and the underserved Jianpu numbered
+notation system. Symbolic scores are generated first, then rendered and degraded toward imperfect
+scans and handwritten-composer conditions. This is a curriculum, not a claim that synthetic output
+is equivalent to real manuscripts.
 
-The renderer is an interface. Verovio/MusicXML is the first implementation; a future notation module
-can provide its own generator, renderer, serializer, and augmentation profile for numbered notation,
-sargam, cipher notation, or another underserved system without changing manifest, split, or training
-interfaces.
+The renderer is an interface over a `music21` score and its canonical `ScoreRecord`. Western uses
+Verovio/MusicXML. Jianpu consumes the same record directly and draws with Pillow, proving a visual
+grammar can change without changing manifest, split, or training interfaces.
 
 ## Pipeline and package boundaries
 
 1. `src/synth/scores.py` samples a deterministic `music21` score and its canonical event record.
 2. `src/vocab/dsl.py` serializes that record into the model target.
-3. `src/synth/render.py` exports MusicXML, renders SVG through Verovio, and rasterizes through
-   CairoSVG. It sets Cairo's macOS fallback library path without overwriting a caller's setting.
+3. `src/synth/render.py` provides the renderer protocol. Western exports MusicXML, renders SVG with
+   Verovio, and rasterizes through CairoSVG. Jianpu draws digits, octave dots, rhythmic marks, rests,
+   bars, voices, and key/time headers directly from the event record.
 4. `src/synth/augment.py` applies seeded paper, geometric, scan, staff-line, ink-bleed, and local
    jitter effects.
-5. `src/synth/generate.py` writes atomic image/target pairs and a JSONL manifest containing seed,
-   curriculum level, paths, image dimensions, and rendering metadata.
+5. `src/synth/generate.py` writes image/target pairs and a JSONL manifest containing seed, notation,
+   curriculum, paths, dimensions, and renderer metadata. IDs include notation to avoid collisions.
 6. `src/data/` validates and loads manifests, makes stable leakage-resistant splits by example ID,
    and filters curriculum levels.
 7. `src/model/` and `train.py` define the deferred trainable recognizer. They are not imported by the
@@ -41,10 +40,11 @@ formats later.
 Every token is vocabulary-atomic. A typical target is:
 
 ```text
-<bos> VERSION_1 PART_BEGIN CLEF_G2 KEY_0 TIME_4_4 VOICE_1 BAR_1 NOTE_C4 DUR_1 ... BAR_END PART_END <eos>
+<bos> VERSION_1 PART_BEGIN NOTATION_JIANPU CLEF_G2 KEY_0 TIME_4_4 BAR_1 VOICE_1 NOTE_C4 DUR_1 ... BAR_END PART_END <eos>
 ```
 
-Durations are integer multiples of a sixteenth note (`DUR_1`, `DUR_2`, `DUR_4`, ...). Pitches use
+The notation token identifies the image grammar while retaining one mechanically convertible
+semantic target. Durations are integer multiples of a sixteenth note (`DUR_1`, `DUR_2`, `DUR_4`, ...). Pitches use
 letter, optional accidental (`s`/`b`), and octave. Chords are bracketed by `CHORD_BEGIN` and
 `CHORD_END`; voices and measures are explicit. The serializer sorts simultaneous chord pitches and
 normalizes metadata, so one score has one target. The initial fixed vocabulary covers the generated
@@ -61,10 +61,12 @@ contains them.
 - Level 1: monophonic with rests, key/time variation, mild rotation, paper/noise, and blur.
 - Level 2: simple two-voice texture and stronger scan defects, ink spread, staff fading, perspective
   warp, and row-wise handwriting-like displacement.
+- Level 3: longer excerpts, wider keys/meters, dotted rhythms, stronger warp and baseline jitter,
+  paper mottling, variable ink spread, and deterministic broken/faint strokes.
 
 All randomness comes from a recorded per-example seed. Augmentation never changes the semantic
-target. The default proof set mixes levels 0–2, while training can select a maximum level and increase
-it over epochs. Synthetic validation/test examples use distinct ID-hash partitions; real manuscript
+target. The default 256-pair set balances both notations and mixes levels 0–3, while training can
+select a maximum level and increase it over epochs. Synthetic validation/test examples use distinct ID-hash partitions; real manuscript
 collections must be held out by source/composer/page, never split by crop.
 
 ## Model
@@ -99,3 +101,5 @@ layout and some musical semantics. A model trained only on it will have a domain
 investments should be renderer/font diversity, learned stroke-level synthesis, real unlabeled image
 pretraining, a small carefully licensed real validation set, and source-aware evaluation. Human review
 is required before generated samples are treated as representative of any non-Western tradition.
+The Jianpu renderer implements a consistent core subset, not every regional convention, accidental
+spelling, ornament, lyric, or multi-part layout.
