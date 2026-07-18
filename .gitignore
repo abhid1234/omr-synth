@@ -1,7 +1,9 @@
-.venv/
 __pycache__/
-*.pyc
-samples/
-*.log
+*.py[cod]
 .DS_Store
+.venv/
+*.log
 codex-build*.log
+checkpoints/
+runs/
+# samples/ is intentionally tracked as a small executable proof artifact.
