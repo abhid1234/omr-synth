@@ -28,6 +28,8 @@ grammar can change without changing manifest, split, or training interfaces.
 7. `src/model/` and `train.py` define the deferred trainable recognizer. They are not imported by the
    runnable synthesis path.
 8. `src/eval/` computes token edit distance, symbol error rate (SER), and exact-match/token accuracy.
+9. `src/demo/build_demo.py` uses the same score records, renderers, and augmentation to build a
+   self-contained offline gallery of paired Western/Jianpu renders and shared semantic targets.
 
 ## Ground truth: OMRDSL v1
 
@@ -54,6 +56,20 @@ streams; parser validation catches structural errors.
 This format intentionally omits engraving layout, beams, ornaments, lyrics, expressive timing, and
 full semantic round-trip to MusicXML. Those become versioned tokens only after the image curriculum
 contains them.
+
+In the browser proof gallery, notation is displayed as card metadata and the `NOTATION_*` token is
+omitted from the displayed shared semantic sequence. This is intentional: the two images have
+different visual-grammar metadata but exactly the same musical event target. Dataset targets retain
+their notation token unchanged.
+
+## Static proof demo
+
+`make demo` deterministically renders ten curated symbolic records in both notation systems, applies
+the normal curriculum degradation to both views, and writes `demo/index.html`. PNGs are base64 data
+URIs and all CSS is inline, so the artifact works from `file://` without JavaScript, external fonts,
+CDNs, or other requests. It includes level-3 manuscript-degraded examples. The gallery is explicitly
+not inference: it demonstrates render-forward synthetic ground truth while model training remains a
+future, separately funded step.
 
 ## Synthetic curriculum
 

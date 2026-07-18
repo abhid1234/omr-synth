@@ -41,6 +41,20 @@ notation, renderer, and curriculum metadata. The framework-neutral loader suppor
 train/validation/test splits and `max_curriculum` filtering. Evaluation provides
 token edit distance, symbol error rate, token accuracy, and exact match.
 
+## Demo
+
+Build the honest synthetic-pairs gallery and open the resulting local file in any browser:
+
+```bash
+make demo
+open demo/index.html
+```
+
+The single self-contained HTML file embeds ten curated Western/Jianpu image pairs, their shared
+semantic OMRDSL targets, and curriculum metadata. It makes no network requests and does not run or
+claim to run a trained model; it is a render-forward ground-truth proof, including visibly degraded
+level-3 samples.
+
 ## Deferred training and inference
 
 Tonight's boundary is $0: no Torch install, model download, GPU, paid API, training run, or inference
