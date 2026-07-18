@@ -1,7 +1,7 @@
 # omr-synth
 
 Synthetic-data-first optical music recognition for notation that general vision-language models do
-not reliably read: Western staff and Jianpu (numbered musical notation, 简谱), with a curriculum from
+not reliably read: Western staff, Jianpu (numbered musical notation, 简谱), and Indian Sargam, with a curriculum from
 clean engraving to manuscript-like images.
 
 Printed Western OMR has strong tools. Handwritten archives and many non-Western traditions do not
@@ -9,9 +9,10 @@ have abundant, consistently labeled image/symbol pairs. `omr-synth` reverses tha
 valid symbolic score, render it forward, degrade it under recorded randomness, and retain perfect
 ground truth. The synthetic engine is the product's first data moat.
 
-The same deterministic symbolic event record drives two swappable renderers. Western excerpts go
+The same deterministic symbolic event record drives three swappable renderers. Western excerpts go
 through MusicXML, Verovio, and CairoSVG. Jianpu is drawn directly with Pillow as scale-degree digits,
-octave dots, subdivision underlines, duration marks, rests, bars, and key/time headers. Both produce
+octave dots, subdivision underlines, duration marks, rests, bars, and key/time headers. Sargam is
+drawn directly with Pillow as tonic-relative S R G M P D N with komal/tivra and saptak marks. All three produce
 compact `OMRDSL-v1` targets with an explicit notation token; see [DESIGN.md](DESIGN.md).
 
 ## What runs locally now
@@ -25,14 +26,14 @@ make test
 make check
 ```
 
-`make synth` creates 256 pairs by default, balanced between both notations. Override the total with,
+`make synth` creates 256 pairs by default, balanced across all three notations (within one). Override the total with,
 for example, `make synth SIZE=400`.
 
 The equivalent generator command is:
 
 ```bash
 DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib ./.venv/bin/python -m src.synth.generate \
-  --output samples --count 256 --seed 1729 --notations western jianpu
+  --output samples --count 256 --seed 1729 --notations western jianpu sargam
 ```
 
 Output is `samples/images/*.png`, matching `samples/targets/*.omrdsl`, and
@@ -50,7 +51,7 @@ make demo
 open demo/index.html
 ```
 
-The single self-contained HTML file embeds ten curated Western/Jianpu image pairs, their shared
+The single self-contained HTML file embeds ten curated Western/Jianpu/Sargam image trios, their shared
 semantic OMRDSL targets, and curriculum metadata. It makes no network requests and does not run or
 claim to run a trained model; it is a render-forward ground-truth proof, including visibly degraded
 level-3 samples.
@@ -81,7 +82,7 @@ python predict.py --checkpoint checkpoints/epoch-030.pt --image page.png \
 The checkpoint vocabulary is used for decoding, and inference applies the same grayscale,
 aspect-preserving white padding and ink-positive scaling as training. `--musicxml` reconstructs the
 semantic OMRDSL subset; `--render` creates a Western staff PNG with Verovio even when the recognized
-input notation was Jianpu. This is a semantic/visual check, not recovery of original engraving layout.
+input notation was Jianpu or Sargam. This is a semantic/visual check, not recovery of original engraving layout.
 
 For meaningful training, generate a much larger manifest and keep real manuscripts held out by
 source/composer/page. MUSCIMA++ and appropriately licensed MusiCorpus material are future real-domain
@@ -90,7 +91,7 @@ evaluation candidates, not bundled data.
 ## Layout
 
 ```text
-src/synth/   score generation, renderer protocol, Western/Jianpu renderers, augmentation, CLI
+src/synth/   score generation, renderer protocol, Western/Jianpu/Sargam renderers, augmentation, CLI
 src/vocab/   canonical OMRDSL serializer/validation and fixed tokenizer
 src/data/    validated manifest loader, stable splits, curriculum hooks
 src/eval/    dependency-free sequence metrics
@@ -101,8 +102,8 @@ tests/       standard-library runnable proof tests
 ## Scope warning
 
 Synthetic degradation is not a substitute for real pen strokes or cultural/notation expertise.
-Jianpu conventions vary by region and repertoire; this is a mechanically consistent core subset,
-not a complete representation. Results establish plumbing and reproducibility, not generalization.
+Jianpu and Sargam conventions vary by region and repertoire; these are mechanically consistent core
+subsets, not complete representations. Results establish plumbing and reproducibility, not generalization.
 
 ## License
 

@@ -31,7 +31,7 @@ class ScoreRecord:
 def serialize(record: ScoreRecord, notation: str = "western") -> str:
     """Serialize semantic music plus the visual notation used for its image."""
     notation_token = f"NOTATION_{notation.upper()}"
-    if notation_token not in {"NOTATION_WESTERN", "NOTATION_JIANPU"}:
+    if notation_token not in {"NOTATION_WESTERN", "NOTATION_JIANPU", "NOTATION_SARGAM"}:
         raise ValueError(f"unsupported notation: {notation}")
     tokens = ["<bos>", DSL_VERSION, "PART_BEGIN", notation_token, f"CLEF_{record.clef}",
               f"KEY_{record.key_fifths}", f"TIME_{record.time[0]}_{record.time[1]}"]
@@ -67,7 +67,7 @@ def validate(text: str) -> None:
         raise ValueError("invalid OMRDSL trailer")
     notation = [t for t in ts if t.startswith("NOTATION_")]
     if notation and (len(notation) != 1 or notation[0] not in
-                     {"NOTATION_WESTERN", "NOTATION_JIANPU"}):
+                     {"NOTATION_WESTERN", "NOTATION_JIANPU", "NOTATION_SARGAM"}):
         raise ValueError("invalid notation marker")
     if not any(t.startswith("BAR_") and t != "BAR_END" for t in ts):
         raise ValueError("score has no measures")

@@ -3,14 +3,15 @@
 ## Product boundary
 
 `omr-synth` is a synthetic-data-first foundation for optical music recognition (OMR) where labeled
-real images are scarce. It supports Western staff notation and the underserved Jianpu numbered
-notation system. Symbolic scores are generated first, then rendered and degraded toward imperfect
+real images are scarce. It supports Western staff notation and the underserved Jianpu numbered and
+Indian Sargam solfège systems. Symbolic scores are generated first, then rendered and degraded toward imperfect
 scans and handwritten-composer conditions. This is a curriculum, not a claim that synthetic output
 is equivalent to real manuscripts.
 
 The renderer is an interface over a `music21` score and its canonical `ScoreRecord`. Western uses
-Verovio/MusicXML. Jianpu consumes the same record directly and draws with Pillow, proving a visual
-grammar can change without changing manifest, split, or training interfaces.
+Verovio/MusicXML. Jianpu and Sargam consume the same record directly and draw with Pillow. Three
+structurally different grammars sharing one record, manifest, split, and training interface establish
+an N-notation engine rather than a paired one-off.
 
 ## Pipeline and package boundaries
 
@@ -18,7 +19,8 @@ grammar can change without changing manifest, split, or training interfaces.
 2. `src/vocab/dsl.py` serializes that record into the model target.
 3. `src/synth/render.py` provides the renderer protocol. Western exports MusicXML, renders SVG with
    Verovio, and rasterizes through CairoSVG. Jianpu draws digits, octave dots, rhythmic marks, rests,
-   bars, voices, and key/time headers directly from the event record.
+   bars, voices, and key/time headers directly from the event record. Sargam maps tonic-relative
+   pitches to S R G M P D N with komal/tivra, saptak, rhythm, rest, bar, voice, and Sa/tala marks.
 4. `src/synth/augment.py` applies seeded paper, geometric, scan, staff-line, ink-bleed, and local
    jitter effects.
 5. `src/synth/generate.py` writes image/target pairs and a JSONL manifest containing seed, notation,
@@ -29,7 +31,7 @@ grammar can change without changing manifest, split, or training interfaces.
    runnable synthesis path.
 8. `src/eval/` computes token edit distance, symbol error rate (SER), and exact-match/token accuracy.
 9. `src/demo/build_demo.py` uses the same score records, renderers, and augmentation to build a
-   self-contained offline gallery of paired Western/Jianpu renders and shared semantic targets.
+   self-contained offline gallery of Western/Jianpu/Sargam render trios and shared semantic targets.
 
 ## Ground truth: OMRDSL v1
 
@@ -58,14 +60,14 @@ full semantic round-trip to MusicXML. Those become versioned tokens only after t
 contains them.
 
 In the browser proof gallery, notation is displayed as card metadata and the `NOTATION_*` token is
-omitted from the displayed shared semantic sequence. This is intentional: the two images have
+omitted from the displayed shared semantic sequence. This is intentional: the three images have
 different visual-grammar metadata but exactly the same musical event target. Dataset targets retain
 their notation token unchanged.
 
 ## Static proof demo
 
-`make demo` deterministically renders ten curated symbolic records in both notation systems, applies
-the normal curriculum degradation to both views, and writes `demo/index.html`. PNGs are base64 data
+`make demo` deterministically renders ten curated symbolic records in all three notation systems, applies
+the normal curriculum degradation to every view, and writes `demo/index.html`. PNGs are base64 data
 URIs and all CSS is inline, so the artifact works from `file://` without JavaScript, external fonts,
 CDNs, or other requests. It includes level-3 manuscript-degraded examples. The gallery is explicitly
 not inference: it demonstrates render-forward synthetic ground truth while model training remains a
@@ -81,7 +83,7 @@ future, separately funded step.
   paper mottling, variable ink spread, and deterministic broken/faint strokes.
 
 All randomness comes from a recorded per-example seed. Augmentation never changes the semantic
-target. The default 256-pair set balances both notations and mixes levels 0–3, while training can
+target. The default 256-pair set balances all three notations within one sample and mixes levels 0–3, while training can
 select a maximum level and increase it over epochs. Synthetic validation/test examples use distinct ID-hash partitions; real manuscript
 collections must be held out by source/composer/page, never split by crop.
 
@@ -117,5 +119,5 @@ layout and some musical semantics. A model trained only on it will have a domain
 investments should be renderer/font diversity, learned stroke-level synthesis, real unlabeled image
 pretraining, a small carefully licensed real validation set, and source-aware evaluation. Human review
 is required before generated samples are treated as representative of any non-Western tradition.
-The Jianpu renderer implements a consistent core subset, not every regional convention, accidental
-spelling, ornament, lyric, or multi-part layout.
+The Jianpu and Sargam renderers implement consistent core subsets, not every regional convention,
+accidental spelling, ornament, lyric, or multi-part layout.

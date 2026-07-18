@@ -8,22 +8,23 @@ from pathlib import Path
 from PIL import Image
 
 from src.synth.augment import degrade
-from src.synth.render import JianpuRenderer, Renderer, VerovioRenderer
+from src.synth.render import JianpuRenderer, Renderer, SargamRenderer, VerovioRenderer
 from src.synth.scores import generate_score
 from src.vocab.dsl import serialize
 
 
 def generate_dataset(output_dir: Path, count: int = 256, seed: int = 1729,
-                     notations: tuple[str, ...] = ("western", "jianpu")) -> Path:
+                     notations: tuple[str, ...] = ("western", "jianpu", "sargam")) -> Path:
     if count < 1:
         raise ValueError("count must be positive")
     images = output_dir / "images"
     targets = output_dir / "targets"
     images.mkdir(parents=True, exist_ok=True)
     targets.mkdir(parents=True, exist_ok=True)
-    available: dict[str, Renderer] = {"western": VerovioRenderer(), "jianpu": JianpuRenderer()}
+    available: dict[str, Renderer] = {"western": VerovioRenderer(), "jianpu": JianpuRenderer(),
+                                      "sargam": SargamRenderer()}
     if not notations or any(name not in available for name in notations):
-        raise ValueError("notations must contain western and/or jianpu")
+        raise ValueError("notations must contain western, jianpu, and/or sargam")
     manifest_path = output_dir / "manifest.jsonl"
     lines = []
     for index in range(count):
@@ -56,8 +57,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("samples"))
     parser.add_argument("--count", type=int, default=256)
     parser.add_argument("--seed", type=int, default=1729)
-    parser.add_argument("--notations", nargs="+", choices=("western", "jianpu"),
-                        default=("western", "jianpu"))
+    parser.add_argument("--notations", nargs="+", choices=("western", "jianpu", "sargam"),
+                        default=("western", "jianpu", "sargam"))
     args = parser.parse_args()
     manifest = generate_dataset(args.output, args.count, args.seed, tuple(args.notations))
     counts = {name: sum(i % len(args.notations) == pos for i in range(args.count))
