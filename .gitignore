@@ -14,3 +14,7 @@ BRIEF*.md
 
 # overnight run log (local)
 OVERNIGHT_RUN.md
+
+# vercel link + env (secrets)
+site/.vercel/
+site/.env.local
