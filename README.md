@@ -79,6 +79,24 @@ python predict.py --checkpoint checkpoints/epoch-030.pt --image page.png \
   --musicxml prediction.musicxml --render prediction.png
 ```
 
+## Evaluate
+
+Evaluate a checkpoint on the stable, held-out test partition of the manifest:
+
+```bash
+make eval CHECKPOINT=checkpoints/epoch-030.pt
+# equivalent:
+python evaluate.py --checkpoint checkpoints/epoch-030.pt \
+  --manifest samples/manifest.jsonl --split test --width 1024 --height 256 \
+  --max-curriculum 3 --batch-size 8 --out evaluation.json
+```
+
+The evaluator reuses the manifest's deterministic split and prediction preprocessing. It reports
+token accuracy, edit distance, symbol error rate, exact-match rate, and mean sequence lengths overall
+and for Western, Jianpu, and Sargam. The JSON summary is printed to stdout (and optionally `--out`);
+the compact human-readable table is printed to stderr. `python evaluate.py --help` does not import
+Torch.
+
 The checkpoint vocabulary is used for decoding, and inference applies the same grayscale,
 aspect-preserving white padding and ink-positive scaling as training. `--musicxml` reconstructs the
 semantic OMRDSL subset; `--render` creates a Western staff PNG with Verovio even when the recognized

@@ -11,3 +11,6 @@ samples/
 
 # internal build briefs
 BRIEF*.md
+
+# overnight run log (local)
+OVERNIGHT_RUN.md

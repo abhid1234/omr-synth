@@ -2,7 +2,7 @@ PYTHON := ./.venv/bin/python
 CAIRO_ENV := DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib
 SIZE ?= 256
 
-.PHONY: synth demo test check train-help predict-help clean-samples
+.PHONY: synth demo test check eval train-help predict-help clean-samples
 
 synth:
 	$(CAIRO_ENV) $(PYTHON) -m src.synth.generate --output samples --count $(SIZE)
@@ -15,6 +15,9 @@ test:
 
 check: test
 	$(PYTHON) -m compileall -q src tests
+
+eval:
+	$(CAIRO_ENV) $(PYTHON) evaluate.py --checkpoint "$(CHECKPOINT)"
 
 train-help:
 	@echo 'Deferred GPU command: python train.py --manifest samples/manifest.jsonl --output checkpoints'
