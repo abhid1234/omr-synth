@@ -15,6 +15,29 @@ octave dots, subdivision underlines, duration marks, rests, bars, and key/time h
 drawn directly with Pillow as tonic-relative S R G M P D N with komal/tivra and saptak marks. All three produce
 compact `OMRDSL-v1` targets with an explicit notation token; see [DESIGN.md](DESIGN.md).
 
+**▶ Interactive demo (reads a page → shared symbolic score → plays/sings it, plus the trained model's real held-out predictions):** https://claude.ai/code/artifact/9cd8155f-453e-45d2-883e-958a586c545f
+
+## Trained model — early results (honest)
+
+A first model was trained **overnight on a Mac mini (M4, MPS) for $0** — a ~26M-parameter
+image→sequence Transformer (CNN encoder + autoregressive decoder emitting OMRDSL). To be learnable in
+one night on consumer hardware, it was scoped to **level-0** (clean, monophonic) across all three
+notations. On held-out pages it never saw:
+
+| Notation | Token accuracy |
+|---|---|
+| Western | ~30% |
+| Jianpu | ~28% |
+| Sargam | ~28% |
+| **Overall** | **~29% (balanced)** |
+
+It reliably recovers **structure** (clef, key, meter, bar/voice layout) and reads **content** (pitches,
+durations) **partially**; exact-match is still 0%. The *balance* across notations is the encouraging
+part — the engine generalizes beyond Western. This is an early, weekend-scale result, not production
+OMR; the reusable contribution is the render-forward **data engine**. Next: a longer, gentler training
+schedule (or a small GPU run) for more steps, higher resolution, curriculum levels 1–3, then adaptation
+to real manuscripts. Full write-up of the overnight run is in the launch materials.
+
 ## What runs locally now
 
 Use the existing virtual environment. CairoSVG on the tested macOS/Homebrew setup needs the fallback
