@@ -15,6 +15,8 @@ octave dots, subdivision underlines, duration marks, rests, bars, and key/time h
 drawn directly with Pillow as tonic-relative S R G M P D N with komal/tivra and saptak marks. All three produce
 compact `OMRDSL-v1` targets with an explicit notation token; see [DESIGN.md](DESIGN.md).
 
+**🤗 Hugging Face — [model](https://huggingface.co/abhid1234/omr-synth) + [30k dataset](https://huggingface.co/datasets/abhid1234/omr-synth)** · download the data, run the model.
+
 **▶ Interactive demo (reads a page → shared symbolic score → plays/sings it, plus the trained model's real held-out predictions):** https://omr-synth.vercel.app
 
 ## Trained model — early results (honest)
