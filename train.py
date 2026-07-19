@@ -14,6 +14,7 @@ from torchvision.transforms import functional as TF
 
 from src.data.dataset import ManifestDataset
 from src.model.omr import OMRTransformer
+from src.training import lr_at
 from src.vocab.tokenizer import Tokenizer
 
 
@@ -45,8 +46,13 @@ def train(args):
                         collate_fn=lambda b: collate(b, tokenizer.pad_id), pin_memory=device.type == "cuda")
     model = OMRTransformer(len(tokenizer.vocabulary), tokenizer.pad_id).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
+    total_steps = args.epochs * len(loader)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda step: lr_at(step, args.lr, args.warmup_steps, total_steps, args.min_lr) / args.lr,
+    )
     scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
-    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_id)
+    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_id, label_smoothing=args.label_smoothing)
     args.output.mkdir(parents=True, exist_ok=True)
     for epoch in range(1, args.epochs + 1):
         model.train(); running = 0.0
@@ -57,12 +63,17 @@ def train(args):
                 logits = model(images, ids[:, :-1])
                 loss = criterion(logits.reshape(-1, logits.size(-1)), ids[:, 1:].reshape(-1))
             scaler.scale(loss).backward(); scaler.unscale_(optimizer)
-            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            scaler.step(optimizer); scaler.update(); running += loss.item()
+            nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+            scale = scaler.get_scale()
+            scaler.step(optimizer); scaler.update()
+            if scaler.get_scale() >= scale:
+                scheduler.step()
+            running += loss.item()
         checkpoint = {"epoch": epoch, "model": model.state_dict(), "optimizer": optimizer.state_dict(),
                       "config": vars(args), "vocabulary": tokenizer.vocabulary}
         torch.save(checkpoint, args.output / f"epoch-{epoch:03d}.pt")
-        print(json.dumps({"epoch": epoch, "train_loss": running / max(1, len(loader)), "device": str(device)}))
+        print(json.dumps({"epoch": epoch, "train_loss": running / max(1, len(loader)),
+                          "device": str(device), "lr": scheduler.get_last_lr()[0]}), flush=True)
 
 
 def main():
@@ -70,6 +81,8 @@ def main():
     parser.add_argument("--manifest", type=Path, required=True); parser.add_argument("--output", type=Path, default=Path("checkpoints"))
     parser.add_argument("--epochs", type=int, default=30); parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=3e-4); parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--warmup-steps", type=int, default=500); parser.add_argument("--min-lr", type=float, default=3e-5)
+    parser.add_argument("--clip", type=float, default=1.0); parser.add_argument("--label-smoothing", type=float, default=0.1)
     parser.add_argument("--width", type=int, default=1024); parser.add_argument("--height", type=int, default=512)
     parser.add_argument("--max-curriculum", type=int, default=2); parser.add_argument("--seed", type=int, default=1729)
     train(parser.parse_args())
