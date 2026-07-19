@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import random
 from pathlib import Path
@@ -43,7 +44,8 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     dataset = TorchOMRDataset(args.manifest, "train", (args.width, args.height), args.max_curriculum)
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers,
-                        collate_fn=lambda b: collate(b, tokenizer.pad_id), pin_memory=device.type == "cuda")
+                        collate_fn=functools.partial(collate, pad_id=tokenizer.pad_id),
+                        persistent_workers=args.workers > 0, pin_memory=device.type == "cuda")
     model = OMRTransformer(len(tokenizer.vocabulary), tokenizer.pad_id).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
     total_steps = args.epochs * len(loader)
